@@ -3,6 +3,9 @@
 // flag, or building any base part within FlagPlantRadius makes a player a member (covers clans without lists).
 // Stored in $profile:PlantableFlora/territory.json, not in the vanilla save. Flags never move, so a flag is
 // identified by its rounded position.
+// With Expansion BaseBuilding (EXPANSIONMODBASEBUILDING) its territory system is used instead: only claimed
+// territories count as bases, members = Expansion territory members, radius = Expansion TerritorySize.
+// territory.json is not touched then.
 
 class PF_FlagEntry
 {
@@ -58,9 +61,65 @@ class PF_Territory
 		return entry && entry.Members.Find(playerId) != -1;
 	}
 
+	static bool UsesExpansion()
+	{
+	#ifdef EXPANSIONMODBASEBUILDING
+		return true;
+	#else
+		return false;
+	#endif
+	}
+
+	// server + client: Expansion safezone (Core). Planting is already blocked there by Expansion's deploy rule,
+	// so our dig/water/fertilize/cut/fell/dig-up actions follow it
+	static bool InSafeZone(PlayerBase player)
+	{
+	#ifdef EXPANSIONMODCORE
+		return player && player.Expansion_IsInSafeZone();
+	#else
+		return false;
+	#endif
+	}
+
+	// server + client: base radius around a flag
+	static float Radius()
+	{
+	#ifdef EXPANSIONMODBASEBUILDING
+		ExpansionTerritorySettings settings = GetExpansionSettings().GetTerritory(false);
+		if (settings && settings.IsLoaded() && settings.TerritorySize > 0)
+			return settings.TerritorySize;
+	#endif
+		return PF_Config.Get().FlagPlantRadius;
+	}
+
+	// server + client: does this flag make a base? Expansion: only claimed territories
+	static bool IsBase(TerritoryFlag flag)
+	{
+		if (!flag)
+			return false;
+	#ifdef EXPANSIONMODBASEBUILDING
+		return flag.HasExpansionTerritoryInformation();
+	#else
+		return true;
+	#endif
+	}
+
+	// server: is this player id a member of the flag? (works for offline players)
+	static bool FlagHasMember(TerritoryFlag flag, string playerId)
+	{
+	#ifdef EXPANSIONMODBASEBUILDING
+		ExpansionTerritory territory = flag.GetTerritory();
+		return territory && territory.IsMember(playerId);
+	#else
+		return IsMember(KeyOf(flag), playerId);
+	#endif
+	}
+
 	// server: player built a part of this flag pole, raised its flag or built near it
 	static void AddMember(Object flag, Man player)
 	{
+		if (UsesExpansion())
+			return;	// Expansion invites decide
 		if (!g_Game.IsServer() || !flag || !player || !player.GetIdentity())
 			return;
 		string id = player.GetIdentity().GetId();
@@ -110,11 +169,11 @@ class PF_Territory
 		array<TerritoryFlag> flags = new array<TerritoryFlag>();
 		array<Object> objs = new array<Object>();
 		array<CargoBase> proxies = new array<CargoBase>();
-		g_Game.GetObjectsAtPosition(pos, PF_Config.Get().FlagPlantRadius, objs, proxies);
+		g_Game.GetObjectsAtPosition(pos, Radius(), objs, proxies);
 		foreach (Object obj : objs)
 		{
 			TerritoryFlag flag = TerritoryFlag.Cast(obj);
-			if (flag)
+			if (IsBase(flag))
 				flags.Insert(flag);
 		}
 		return flags;
@@ -143,11 +202,11 @@ class PF_Territory
 	// server: inside the radius of a flag that currently refreshes lifetimes (raised, not run out)
 	static bool IsInActiveBase(vector pos)
 	{
-		float radius = PF_Config.Get().FlagPlantRadius;
+		float radius = Radius();
 		float radiusSq = radius * radius;
 		foreach (TerritoryFlag flag : s_Flags)
 		{
-			if (flag && flag.m_RefresherActive && vector.DistanceSq(flag.GetPosition(), pos) <= radiusSq)
+			if (IsBase(flag) && flag.m_RefresherActive && vector.DistanceSq(flag.GetPosition(), pos) <= radiusSq)
 				return true;
 		}
 		return false;
@@ -159,11 +218,11 @@ class PF_Territory
 	{
 		if (ownerId == "")
 			return false;
-		float radius = PF_Config.Get().FlagPlantRadius;
+		float radius = Radius();
 		float radiusSq = radius * radius;
 		foreach (TerritoryFlag flag : s_Flags)
 		{
-			if (flag && vector.DistanceSq(flag.GetPosition(), pos) <= radiusSq && IsMember(KeyOf(flag), ownerId))
+			if (IsBase(flag) && vector.DistanceSq(flag.GetPosition(), pos) <= radiusSq && FlagHasMember(flag, ownerId))
 				return true;
 		}
 		return false;
@@ -196,14 +255,21 @@ class PF_Territory
 	}
 
 	// server: membership from territory.json; client: the flag keys the server synced (SYNC_FLAGS)
+	// Expansion: server asks the territory, client has the territories it is a member of (synced by Expansion)
 	protected static bool PlayerIsMember(Man player, TerritoryFlag flag)
 	{
-		string key = KeyOf(flag);
 		if (!g_Game.IsServer())
-			return PF_ClientState.MyFlags.Find(key) != -1;
+		{
+		#ifdef EXPANSIONMODBASEBUILDING
+			ExpansionTerritoryModule module = ExpansionTerritoryModule.s_Instance;
+			return module && module.GetTerritory(flag.GetTerritoryID()) != null;
+		#else
+			return PF_ClientState.MyFlags.Find(KeyOf(flag)) != -1;
+		#endif
+		}
 		if (!player || !player.GetIdentity())
 			return false;
-		return IsMember(key, player.GetIdentity().GetId());
+		return FlagHasMember(flag, player.GetIdentity().GetId());
 	}
 }
 

@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/). The version is `version` in `release/mod.cpp`.
 Config changes: new keys are added to an existing `config.json` automatically, existing values stay.
 
+## [0.3.1] - 2026-10-27
+
+### Added
+- Expansion BaseBuilding support (beta, tested solo): with Expansion the base rules use Expansion's claimed territories, their members and `TerritorySize` instead of the own flag tracking. An unclaimed flag pole is no base. Digging a planting hole, watering, fertilizing, cutting, digging up and felling are not possible in Expansion safezones (searching wild trees for seeds still is). Admin guide 4.2.
+
+### Changed
+- New logo.
+- The planting preview repeats the vanilla placement checks itself (step off the spot, too far above/below you, under water, aim at the ground). With Expansion's `CanBuildAnywhere` these were skipped; without Expansion the existing rejections now show a reason.
+
 ## [0.3.0] - 2026-10-23
 
 ### Added

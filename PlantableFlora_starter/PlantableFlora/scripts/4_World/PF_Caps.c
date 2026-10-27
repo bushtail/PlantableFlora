@@ -144,14 +144,14 @@ class PF_Caps
 		s_BaseTime = now;
 		s_BaseReason = "";
 
-		float radius = PF_Config.Get().FlagPlantRadius;
+		float radius = PF_Territory.Radius();
 		float radiusSq = radius * radius;
 		int limit = BaseMax(kind);
 		array<PF_Bush_Base> plants = PF_Registry.GetAll();
 		array<TerritoryFlag> flags = PF_Territory.AllFlags();
 		foreach (TerritoryFlag flag : flags)
 		{
-			if (!flag || vector.DistanceSq(flag.GetPosition(), pos) > radiusSq)
+			if (!PF_Territory.IsBase(flag) || vector.DistanceSq(flag.GetPosition(), pos) > radiusSq)
 				continue;
 			int count = 0;
 			foreach (PF_Bush_Base plant : plants)

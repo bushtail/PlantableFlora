@@ -4,6 +4,10 @@ modded class MissionServer
 	{
 		super.OnInit();
 		PF_Config.Get();	// load (or create) config.json at start
+		if (PF_Territory.UsesExpansion())
+			Print("[PlantableFlora] territories: Expansion BaseBuilding");
+		else
+			Print("[PlantableFlora] territories: own (territory.json)");
 		PF_StressTest.Start();	// DEV: only acts when config StressTestCount > 0 or test plants exist
 		PF_Wipe.Start();		// admin: only acts when config WipeAllPlants is true
 		PF_Stats.Start();		// admin: stats.txt every StatsMinutes

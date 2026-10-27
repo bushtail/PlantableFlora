@@ -212,6 +212,13 @@ Vanilla territory flags have no owner, so the mod tracks **members** itself. A p
 
 Membership is stored in `territory.json` and never expires.
 
+**With DayZ Expansion BaseBuilding** the mod uses Expansion's territory system instead (the server log shows `[PlantableFlora] territories: Expansion BaseBuilding` at start):
+
+- Only **claimed** Expansion territories count as bases. A flag pole without a territory created in the flag menu is no base (no protection, no base limits).
+- Members = the territory's members (owner + invited players). Building parts or raising the flag no longer makes anyone a member; `territory.json` is not used.
+- The radius is Expansion's `TerritorySize` (default 150 m) instead of `FlagPlantRadius`, for protection, `RequireOwnFlag` and all base limits below.
+- Expansion's own deploy rules also apply to seeds (no planting in Expansion safezones, and no digging, watering, fertilizing, cutting, digging up or felling there either; in enemy territory unless the seed class is whitelisted in `DeployableInsideAEnemyTerritory`).
+
 **`ProtectForeignBases`** (default on): no planting within `FlagPlantRadius` (60 m, the vanilla flag refresh radius) of a flag the player is not a member of. If several flags overlap, every one of them must be the player's own. This rule is **silent**: the prompt shows no reason, so players can't use a seed preview to find hidden bases. A pole without a raised flag counts as a flag.
 
 **`RequireOwnFlag`** (strict mode, default off): players may plant **only** within `FlagPlantRadius` of a flag they are a member of, nowhere else in the world. Use it if you want planting to be base decoration only (fewer plants in the open world, no tree walls on roads or loot spots). Players without a flag can't plant at all, and planting a bush on a stash in the woods is no longer possible. The prompt tells the player why ("Needs your own territory flag nearby"); this reveals nothing about other players' bases.
@@ -335,7 +342,7 @@ To see the shade at work: put your Steam64 ID into `AdminIds`, set `ShadeDebug` 
 | `ProtectForeignBases` | true | No planting in other players' bases |
 | `RequireOwnFlag` | false | Strict mode: planting only in your own base |
 | `ShowSeedSpecies` | false | true: seeds show their species ("Spruce Seed (forest)"); false: seeds are only called "Tree Seed" / "Bush Seed" (inventory, inspect, found message); players have to remember which species they found. The seed pack print already only shows tree or bush |
-| `FlagPlantRadius` | 60 | m around a territory flag |
+| `FlagPlantRadius` | 60 | m around a territory flag (with Expansion: its `TerritorySize`) |
 | `RoadSurfaces` | cp_concrete1, cp_concrete2, cp_gravel | Terrain surfaces that count as road (roads of the road network are found as objects anyway). An empty list falls back to the defaults. `cp_dirt` is left out on purpose: it is fertile and also painted on farmyards and field edges. Configs from before 0.1.0 still list it, remove it there. |
 | `NoPlantZones` | [] | Admin zones (4.1) |
 | `TreeRootSinkPercent` | 6 | Fallback ground height for tree models without measured data. Don't change. |

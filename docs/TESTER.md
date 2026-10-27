@@ -149,6 +149,17 @@ Planted trees and bushes must not be recognizable. Look for anything that gives 
 6. Namalsk and Winter Chernarus are not tested at all yet: does thawing work there, and is the right ground frozen?
 7. Is 5 minutes of fire too long or too short? Is 2 m around the fire enough?
 
+### 3.10 Servers with DayZ Expansion (BaseBuilding)
+
+On Expansion servers the mod uses Expansion's territories instead of its own flag membership.
+
+1. Claim a territory in the flag menu. Planting next to your flag works.
+2. Plant about 100 m from your flag (inside Expansion's 150 m territory): the prompt should show your base limits "(Base: ...)".
+3. A flag pole without a claimed territory is no base: other players can plant next to it.
+4. Invite a second player to your territory. They can plant in your base without building anything first.
+5. A player who is not a member can't plant inside your territory (no reason shown, on purpose).
+6. Expansion safezones: planting is refused there (Expansion's rule, no placement prompt at all). Digging a planting hole, watering, fertilizing, cutting, digging up and felling are not offered there either. Chernarus default: Green Mountain trader, 500 m around 3728/6003.
+
 ---
 
 ## 4. How to report

@@ -101,6 +101,22 @@ class PF_Seed_Base extends ItemBase
 		return ok;
 	}
 
+	// vanilla EvaluateCollision checks that apply to plant projections (the others are switched off in PF_Hologram)
+	protected string HologramBlock(PlayerBase pb, Hologram hologram, PF_Bush_Base projection)
+	{
+		if (!pb.CanPlaceItem(projection))
+			return "Can't plant right now";
+		if (hologram.IsCollidingPlayer())
+			return "Step off the planting spot";
+		if (!hologram.HeightPlacementCheck())
+			return "Too far above or below you";
+		if (hologram.IsUnderwater())
+			return "Under water";
+		if (hologram.IsFloating() || hologram.IsHidden() || hologram.IsCollidingZeroPos())
+			return "Aim at the ground";
+		return "";
+	}
+
 	// called every frame while placing (hologram + prompt): cheap checks first, the world queries are cached
 	override bool CanBePlaced(Man player, vector position)
 	{
@@ -121,6 +137,14 @@ class PF_Seed_Base extends ItemBase
 		PF_Bush_Base projection;
 		if (hologram && Class.CastTo(projection, hologram.GetProjectionEntity()))
 			position[1] = position[1] - projection.GetGroundOffset();
+		// Expansion CanBuildAnywhere (default on) skips Hologram.EvaluateCollision, only CanBePlaced still runs:
+		// repeat the vanilla hologram checks that matter for plants (client only, like vanilla)
+		if (projection && !g_Game.IsDedicatedServer())
+		{
+			string holoBlock = HologramBlock(pb, hologram, projection);
+			if (holoBlock != "")
+				return PlaceResult(player, false, holoBlock);
+		}
 		if (PF_Config.Get().DebugLogs)
 			PF_Placement.LogSurfaceAt(position[0], position[2]);
 

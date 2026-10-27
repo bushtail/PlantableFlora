@@ -440,6 +440,8 @@ class PF_ActionDigPlantingMound : ActionContinuousBase
 
 	static bool CanDigAt(PlayerBase player, PF_Seed_Base seed, vector pos)
 	{
+		if (PF_Territory.InSafeZone(player))
+			return false;
 		PF_Config cfg = PF_Config.Get();
 		string fail;
 		string surface;
@@ -654,7 +656,7 @@ class PF_ActionFertilizeMound : ActionContinuousBase
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		PF_PlantingMound mound = PF_PlantingMound.Cast(target.GetObject());
-		if (!mound || mound.IsFertilized())
+		if (!mound || mound.IsFertilized() || PF_Territory.InSafeZone(player))
 			return false;
 		if (!item.IsInherited(GardenLime) && !item.IsInherited(PlantMaterial))
 			return false;
@@ -704,7 +706,7 @@ class PF_ActionWaterMound : ActionContinuousBase
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		PF_PlantingMound mound = PF_PlantingMound.Cast(target.GetObject());
-		if (!mound || mound.IsWatered())
+		if (!mound || mound.IsWatered() || PF_Territory.InSafeZone(player))
 			return false;
 		if (item.GetLiquidType() != LIQUID_WATER || item.GetIsFrozen())
 			return false;

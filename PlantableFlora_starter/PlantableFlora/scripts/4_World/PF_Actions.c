@@ -80,7 +80,7 @@ class PF_ActionCutBush : ActionContinuousBase
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		PF_Bush_Base bush = PF_Bush_Base.Cast(target.GetObject());
-		if (!bush)
+		if (!bush || PF_Territory.InSafeZone(player))
 			return false;
 
 		bool canCut = bush.CanBeCut();
@@ -144,7 +144,7 @@ class PF_ActionDigUpPlant : ActionContinuousBase
 
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if (player.GetBrokenLegs() == eBrokenLegs.BROKEN_LEGS || !PF_Tools.CanDig(item))
+		if (player.GetBrokenLegs() == eBrokenLegs.BROKEN_LEGS || !PF_Tools.CanDig(item) || PF_Territory.InSafeZone(player))
 			return false;
 
 		if (PF_PlantingMound.Cast(target.GetObject()))
@@ -209,7 +209,7 @@ class PF_ActionFellTree : ActionContinuousBase
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		PF_Bush_Base tree = PF_Bush_Base.Cast(target.GetObject());
-		return tree && tree.CanBeFelled() && PF_Tools.CanFell(item);
+		return tree && tree.CanBeFelled() && PF_Tools.CanFell(item) && !PF_Territory.InSafeZone(player);
 	}
 
 	override void OnFinishProgressServer(ActionData action_data)
