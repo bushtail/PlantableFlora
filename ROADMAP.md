@@ -1,6 +1,6 @@
 # Roadmap
 
-What may come after 0.3.0. Nothing here is a promise, order and details can change. Ideas and wishes are welcome: [open an issue](https://github.com/olliollio/PlantableFlora/issues).
+What may come after 0.4.0. Nothing here is a promise, order and details can change. Ideas and wishes are welcome: [open an issue](https://github.com/olliollio/PlantableFlora/issues).
 
 ## Next (v1.1)
 
@@ -17,7 +17,7 @@ What may come after 0.3.0. Nothing here is a promise, order and details can chan
 ## Ideas (not decided)
 
 - **Crowded trees thin out.** Trees may be planted closer (1 m), but in a dense group the youngest may die while growing, like in a real forest. The planting prompt warns.
-- **Falling trees.** A felled tree falls over and leaves a trunk next to the stump.
+- **Felling in two steps.** The axe only fells a tree (planted or wild), the logs come from sawing the lying trunk; the sawn-up trunk disappears. Optional server setting.
 - **Seed models per species** (acorn, cone, berries), so experienced players recognise a seed.
 - **Old giants.** After a very long time a tree grows into the largest vanilla size.
 - **Growth waits when something is in the way** (a car or a wall on the spot) instead of growing into it.

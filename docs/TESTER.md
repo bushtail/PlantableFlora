@@ -63,7 +63,7 @@ An empty vanilla garden plot works too, instead of a mound.
 | What | How |
 |---|---|
 | Cut a bush | Knife/axe/machete → "Harvest Long Wooden Stick". Grows back after a while. |
-| Fell a tree | Axe → "Harvest Wooden Log" (45 s) |
+| Fell a tree | Axe → "Harvest Wooden Log" (45 s, one log per cycle, then the tree falls) |
 | Dig up a bush, sapling or stump | Shovel in hands → "Dig up" (20 s) |
 | Fill in an unused mound | Shovel in hands → "Fill in planting hole" |
 

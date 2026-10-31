@@ -131,7 +131,7 @@ An empty vanilla garden plot also works as a mound (`AllowGardenPlot`); one fert
 | Action | Tool | Time | Result |
 |---|---|---|---|
 | Cut bush ("Harvest Long Wooden Stick") | knife, machete, sickle, axe, sword | `CutSeconds` 5 | Sticks, bush vanishes and grows back after `BushRegrowSeconds` (1 h) |
-| Fell tree ("Harvest Wooden Log") | hatchet, wood axe, firefighter axe | `FellSeconds` 45 | 3 logs + 4 long sticks, stump for spruce, oak, pine, beech and Turkish pine. Never grows back. |
+| Fell tree ("Harvest Wooden Log") | hatchet, wood axe, firefighter axe | `FellSeconds` 45 | Like the same wild tree: one log or firewood per chopping cycle, as many as the wild tree gives (e.g. spruce 2 logs + 4 firewood, pine 3 logs + 2 firewood, birch 6 firewood + 1 stick); on the last cycle the extra items drop and the tree falls over away from you. It lies there without collision until the next server restart (`FallenTreeMinutes`, `FallenTreeCollision`). Trees without a vanilla wild version (Badlands) give `FellLogs` logs + `FellSticks` sticks. Stump for spruce, oak, pine, beech and Turkish pine. Never grows back. |
 | Dig up | digging tool in hands | `DigUpSeconds` 20 | Removes a bush, young tree or stump for good. Full-grown trees must be felled first. |
 
 Anyone can cut, fell or dig up any planted plant, owner or not.
@@ -309,6 +309,10 @@ To see the shade at work: put your Steam64 ID into `AdminIds`, set `ShadeDebug` 
 | `CutSeconds` | 5 |
 | `DigUpSeconds` | 20 |
 | `FellSeconds` | 45 |
+| `FellLogs` | 3 |
+| `FellSticks` | 4 |
+| `FallenTreeMinutes` | 0 (= until the next restart) |
+| `FallenTreeCollision` | false (lying tree blocks nobody, like vanilla); true = felled planted **and wild** trees keep their collision while they lie there |
 | `SearchSeedSeconds` | 6 |
 
 ### 7.3 Ground preparation (3.2)

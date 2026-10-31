@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/). The version is `version` in `release/mod.cpp`.
 Config changes: new keys are added to an existing `config.json` automatically, existing values stay.
 
+## [0.4.0] - 2026-10-31
+
+### Changed
+- Felling a planted tree works like the same wild tree: one log or firewood per chopping cycle with the wild tree's amounts and tool wear, then the tree falls over away from you (vanilla fall sound) and lies on the ground without collision until the next server restart. New config keys `FellLogs`, `FellSticks` (trees without a wild version), `FallenTreeMinutes`, `FallenTreeCollision` (also gives felled wild trees their collision back).
+
 ## [0.3.1] - 2026-10-27
 
 ### Added

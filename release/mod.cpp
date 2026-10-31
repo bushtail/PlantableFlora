@@ -5,7 +5,7 @@
 // The Workshop preview image is set separately on the Steam page (Artwork\logo_large.png).
 name = "PlantableFlora - Plant Trees and Bushes";
 author = "ollio";
-version = "0.3.1";
+version = "0.4.0";
 tooltip = "PlantableFlora";
 overview = "Dig a planting hole, water it and plant tree and bush seeds found in the world. Seedlings grow into real map trees and bushes over hours: hide your base, grow cover, plant your own orchard. Chernarus, Livonia and Badlands species, real tree shade on Badlands, base protection, limits and decay, fully configurable by server admins. Test build.";
 picture = "PlantableFlora\data\gui\picture.paa";

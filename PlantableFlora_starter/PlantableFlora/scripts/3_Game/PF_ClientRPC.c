@@ -42,6 +42,14 @@ modded class DayZGame
 			return;
 		}
 
+		if (!target && rpc_type == PF_RPC.SYNC_FALLEN)
+		{
+			Param2<ref array<string>, ref array<vector>> fallen = new Param2<ref array<string>, ref array<vector>>(null, null);
+			if (ctx.Read(fallen) && fallen.param1 && fallen.param2)
+				PF_FallenColliders.OnReceive(fallen.param1, fallen.param2);
+			return;
+		}
+
 		if (!target && rpc_type == PF_RPC.SHADE_INFO)
 		{
 			Param1<string> shade = new Param1<string>("");

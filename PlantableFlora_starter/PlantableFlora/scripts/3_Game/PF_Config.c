@@ -6,6 +6,7 @@ class PF_RPC
 	static const int SYNC_FLAGS = 714310103;	// server -> client: territory flags the player is a member of
 	static const int SHADE_INFO = 714310104;	// server -> client: shade debug text (config ShadeDebug), every 2 s
 	static const int SYNC_THAW = 714310105;	// server -> clients: positions of thawed ground on winter maps (PF_Frozen)
+	static const int SYNC_FALLEN = 714310106;	// server -> clients: hidden colliders of felled wild trees (PF_FallenColliders)
 }
 
 // Admin zone without planting (traders, safe zones, events): world position (Y is ignored) + radius in m
@@ -42,7 +43,11 @@ class PF_Config
 	float PlantSeconds = 3;
 	float CutSeconds = 5;
 	float DigUpSeconds = 20;
-	float FellSeconds = 45;
+	float FellSeconds = 45;			// chopping a planted tree, all cycles together
+	int FellLogs = 3;				// wooden logs from a felled planted tree, one per chopping cycle; only for models without a vanilla wild tree entry (Badlands), others give what the same wild tree gives
+	int FellSticks = 4;				// long wooden sticks, dropped when such a tree falls
+	float FallenTreeMinutes = 0;	// a felled tree lies on the ground this long; 0 = until the next server restart (vanilla)
+	bool FallenTreeCollision = false;	// a felled tree lying on the ground blocks players and vehicles, planted and wild ones (vanilla: no collision)
 	float SearchSeedSeconds = 6;
 
 	// ground preparation: seeds are planted onto a planting mound (dug from the seed hologram) or an empty garden plot

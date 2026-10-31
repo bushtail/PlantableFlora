@@ -8,7 +8,7 @@ class PF_Bush_Base extends ItemBase
 	static const int SWAP_DELAY_MS = 1000;
 
 	// growth: only plants with a pf_nextStage in config (young stages) use these
-	static const int STORAGE_VERSION = 4;	// first int written by OnStoreSave; 2 added m_GrowFactor, 3 m_FirstPlantedAt, 4 soil look (1-3 still load)
+	static const int STORAGE_VERSION = 5;	// first int written by OnStoreSave; 2 added m_GrowFactor, 3 m_FirstPlantedAt, 4 soil look, 5 m_Falling (1-4 still load)
 	protected string m_OwnerId;			// PlayerIdentity.GetId() of the planter, saved
 	protected int m_PlantedAt;			// PF_Time.Now() when this stage started, saved with growing stages
 	protected int m_FirstPlantedAt;		// PF_Time.Now() when the seed went into the ground, kept through all stages, saved; 0 = from an older save (counts as oldest)
@@ -20,11 +20,23 @@ class PF_Bush_Base extends ItemBase
 	protected int m_SoilFertilizer;		// PF_PreparedGround.FERT_*
 	protected bool m_SoilWatered;
 	protected Object m_ClutterCutter;	// config pf_clutterCutter: keeps the grass off the soil heap (not saved, made again on load)
+	// felling (vanilla style, PF_TreeFall): chopping cycles done (not saved, a restart resets them like vanilla wild trees),
+	// then the tree falls and lies until the next restart (m_Falling saved: such a tree is dropped on load)
+	protected int m_Chops;
+	protected bool m_Falling;
+	protected bool m_FallDone;		// server has set the lying pose
+	protected float m_FallHeading;	// rad, world heading the tree falls to
+	protected float m_FallTilt;		// rad from upright when it lies on the terrain
+	protected bool m_FallAnimStarted;	// client: animation started once (later syncs must not start it again from the lying pose)
 
 	void PF_Bush_Base()
 	{
 		RegisterNetSyncVariableInt("m_SoilFertilizer", 0, 2);
 		RegisterNetSyncVariableBool("m_SoilWatered");
+		RegisterNetSyncVariableBool("m_Falling");
+		RegisterNetSyncVariableBool("m_FallDone");
+		RegisterNetSyncVariableFloat("m_FallHeading", -Math.PI, Math.PI, 3);
+		RegisterNetSyncVariableFloat("m_FallTilt", 0, 2.5, 3);
 	}
 
 	bool HasSoilLook()
@@ -47,8 +59,20 @@ class PF_Bush_Base extends ItemBase
 	override void OnVariablesSynchronized()
 	{
 		super.OnVariablesSynchronized();
-		if (!g_Game.IsDedicatedServer() && HasSoilLook())
+		if (g_Game.IsDedicatedServer())
+			return;
+		if (HasSoilLook())
 			PF_PlantingMound.ApplySoilLook(this, m_SoilFertilizer, m_SoilWatered);
+		// the server pose comes with m_FallDone; a player streaming in later only sees the lying tree
+		if (m_Falling && !m_FallAnimStarted)
+		{
+			m_FallAnimStarted = true;
+			RemoveFallenCollision();
+			if (!m_FallDone)
+				PF_TreeFallAnim.Start(this, GetTrunkPosition(), m_FallHeading, m_FallTilt, GetFellYield().Hard);
+		}
+		if (m_FallDone)
+			PF_TreeFallAnim.Stop(this);
 	}
 
 	string GetOwnerId()
@@ -206,9 +230,12 @@ class PF_Bush_Base extends ItemBase
 		return fellClass;
 	}
 
-	// counts for the tree spacing rule (config pf_isTree, any stage except the stump)
+	// counts for the tree spacing rule (config pf_isTree, any stage except the stump); a felled tree is no tree any more
+	// (no shade, no seed search, no spacing)
 	bool IsTreePlant()
 	{
+		if (m_Falling)
+			return false;
 		int isTree = g_Game.ConfigGetInt("CfgVehicles " + GetType() + " pf_isTree");
 		return isTree == 1;
 	}
@@ -216,7 +243,26 @@ class PF_Bush_Base extends ItemBase
 	// only mature trees (config pf_fellClass) can be felled
 	bool CanBeFelled()
 	{
-		return !IsProjection() && GetFellClass() != "";
+		return !IsProjection() && !m_Falling && GetFellClass() != "";
+	}
+
+	bool IsFalling()
+	{
+		return m_Falling;
+	}
+
+	PF_FellYield GetFellYield()
+	{
+		string model;
+		g_Game.ConfigGetText("CfgVehicles " + GetType() + " model", model);
+		return PF_FellYield.ForModel(model);
+	}
+
+	// vanilla fallen trees have no collision; config FallenTreeCollision keeps it (server + every client)
+	protected void RemoveFallenCollision()
+	{
+		if (!PF_Config.Get().FallenTreeCollision)
+			dBodyDestroy(this);
 	}
 
 	// mature trees must be felled first; only young plants, bushes and stumps can be dug up
@@ -225,25 +271,71 @@ class PF_Bush_Base extends ItemBase
 		return !IsProjection() && GetFellClass() == "";
 	}
 
-	// Fell: logs and sticks drop, the tree is replaced by a permanent stump (no regrow)
-	void Fell()
+	// one chopping cycle of PF_ActionFellTree (like vanilla CAContinuousMineWood): one primary item (log or firewood,
+	// PF_FellYield of the model) drops at the chopper's feet, the last cycle also drops the secondary items and the tree falls
+	void Chop(PlayerBase player)
 	{
-		string fellClass = GetFellClass();
-		if (fellClass == "")
+		if (!CanBeFelled())
 			return;
+		PF_FellYield yield = GetFellYield();
+		m_Chops++;
+		vector feet = player.GetPosition();
+		if (m_Chops <= yield.PrimaryCount)
+			g_Game.CreateObjectEx(yield.Primary, feet, ECE_PLACE_ON_SURFACE);
+		if (m_Chops < yield.Cycles())
+			return;
+		for (int i = 0; i < yield.SecondaryCount; i++)
+			g_Game.CreateObjectEx(yield.Secondary, feet, ECE_PLACE_ON_SURFACE);
+		StartFall(feet);
+	}
 
-		vector pos = GetTrunkPosition();
-		vector ori = GetOrientation();
-		for (int i = 0; i < 3; i++)
-			g_Game.CreateObjectEx("WoodenLog", pos + Vector(Math.RandomFloat(-1.5, 1.5), 0.3, Math.RandomFloat(-1.5, 1.5)), ECE_PLACE_ON_SURFACE);
-		for (int j = 0; j < 4; j++)
-			g_Game.CreateObjectEx("LongWoodenStick", pos + Vector(Math.RandomFloat(-1.5, 1.5), 0.3, Math.RandomFloat(-1.5, 1.5)), ECE_PLACE_ON_SURFACE);
+	// Fell (vanilla style): the tree tips over away from the chopper and lies until the next server restart
+	// (or FallenTreeMinutes); the permanent stump (no regrow) spawns right away under it
+	void StartFall(vector chopperPos)
+	{
+		if (m_Falling)
+			return;
+		vector trunk = GetTrunkPosition();
+		vector away = trunk - chopperPos;
+		away[1] = 0;
+		if (away.Length() < 0.1)
+			away = GetDirection();
+		float heading = Math.Atan2(away[0], away[2]) + Math.RandomFloat(-0.25, 0.25);
+		if (heading > Math.PI)
+			heading -= Math.PI2;
+		if (heading < -Math.PI)
+			heading += Math.PI2;
+		vector pivot = PF_TreeFall.Pivot(this, trunk);
+		m_FallHeading = heading;
+		m_FallTilt = PF_TreeFall.RestTilt(this, pivot, heading);
+		m_Falling = true;
+		SetSynchDirty();
+		RemoveFallenCollision();
+		PF_Growth.Unregister(this);
+		PF_Registry.Unregister(this);
 
-		// the stump spawns a moment after the tree is gone, otherwise clients never show it
-		PF_Log.Debug("" + GetType() + " felled -> " + fellClass + " at " + pos.ToString());
+		string fellClass = GetFellClass();
+		PF_Log.Debug(string.Format("%1 felled -> %2 at %3, heading %4 tilt %5", GetType(), fellClass, trunk.ToString(), heading * Math.RAD2DEG, m_FallTilt * Math.RAD2DEG));
+		// the tree stays (it only falls), so no swap delay needed for the stump
 		if (fellClass != "none")
-			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(PF_Bush_Base.SpawnStump, SWAP_DELAY_MS, false, fellClass, pos, ori, m_OwnerId, 1.0, m_FirstPlantedAt, false);
-		g_Game.ObjectDelete(this);
+			SpawnStump(fellClass, trunk, GetOrientation(), m_OwnerId, 1.0, m_FirstPlantedAt, false);
+
+		float seconds = PF_TreeFall.Duration(PF_TreeFall.Length(this, pivot), m_FallTilt);
+		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(EndFall, seconds * 1000 + 200, false, pivot);
+	}
+
+	// server: lying pose for everyone (clients have animated it themselves)
+	protected void EndFall(vector pivot)
+	{
+		PF_TreeFall.SetLying(this, pivot, m_FallHeading, m_FallTilt);
+		m_FallDone = true;
+		SetSynchDirty();
+		float minutes = PF_Config.Get().FallenTreeMinutes;
+		if (minutes > 0)
+		{
+			SetLifetimeMax(minutes * 60);
+			SetLifetime(minutes * 60);
+		}
 	}
 
 	// spawns the next stage or the stump; matured = it is the final stage reached by growing (player pool check)
@@ -313,6 +405,8 @@ class PF_Bush_Base extends ItemBase
 	{
 		super.EEDelete(parent);
 		PF_Log.Debug("EEDelete " + GetType() + " at " + GetPosition().ToString() + " server=" + g_Game.IsServer());
+		if (m_Falling && !g_Game.IsDedicatedServer())
+			PF_TreeFallAnim.Stop(this);
 		if (g_Game.IsServer())
 		{
 			PF_Growth.Unregister(this);
@@ -334,6 +428,7 @@ class PF_Bush_Base extends ItemBase
 		ctx.Write(m_FirstPlantedAt);
 		ctx.Write(m_SoilFertilizer);
 		ctx.Write(m_SoilWatered);
+		ctx.Write(m_Falling);
 		if (GetNextStageConfig() != "")
 			ctx.Write(m_PlantedAt);
 		PF_Log.Debug("OnStoreSave " + GetPosition().ToString());
@@ -362,6 +457,17 @@ class PF_Bush_Base extends ItemBase
 			if (!ctx.Read(m_SoilFertilizer) || !ctx.Read(m_SoilWatered))
 				return false;
 			SetSynchDirty();
+		}
+		// a felled tree lies until the restart (vanilla): delete it once loaded, its stump is saved on its own
+		// (returning false would log "Scripted variables corrupted")
+		bool fallen = false;
+		if (storedVersion >= 5 && !ctx.Read(fallen))
+			return false;
+		if (fallen)
+		{
+			PF_Log.Debug("felled " + GetType() + " removed on load");
+			m_Falling = true;
+			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(g_Game.ObjectDelete, 0, false, this);
 		}
 		if (GetNextStageConfig() != "")
 		{
@@ -399,6 +505,9 @@ class PF_Bush_Base extends ItemBase
 
 	void SnapToGround()
 	{
+		// felled tree: falling / lying, never stand it up again (EEInit snaps, live GroundOffsetOverrides)
+		if (m_Falling)
+			return;
 		// seedling (config pf_alignToTerrain): the soil heap tilts with the slope like the planting hole
 		if (g_Game.ConfigGetInt("CfgVehicles " + GetType() + " pf_alignToTerrain") == 1)
 		{

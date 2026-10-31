@@ -178,7 +178,13 @@ class PF_ActionFellTreeCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
-		m_ActionData.m_ActionComponent = new CAContinuousTime(PF_Config.Get().FellSeconds);
+		// vanilla wild trees: one log/firewood per cycle, the tree falls on the last one (PF_Bush_Base.Chop);
+		// FellSeconds is the whole tree, so trees with more drops get shorter cycles
+		int cycles = 1;
+		PF_Bush_Base tree = PF_Bush_Base.Cast(m_ActionData.m_Target.GetObject());
+		if (tree)
+			cycles = tree.GetFellYield().Cycles();
+		m_ActionData.m_ActionComponent = new CAContinuousRepeat(PF_Config.Get().FellSeconds / cycles);
 	}
 }
 
@@ -197,7 +203,11 @@ class PF_ActionFellTree : ActionContinuousBase
 	// same prompt as vanilla ActionMineTree on wild trees ("Harvest <first yield>")
 	override void OnActionInfoUpdate(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		m_Text = "#harvest" + " " + MiscGameplayFunctions.GetItemDisplayName("WoodenLog");
+		string primary = "WoodenLog";
+		PF_Bush_Base tree = PF_Bush_Base.Cast(target.GetObject());
+		if (tree)
+			primary = tree.GetFellYield().Primary;
+		m_Text = "#harvest" + " " + MiscGameplayFunctions.GetItemDisplayName(primary);
 	}
 
 	override void CreateConditionComponents()
@@ -218,8 +228,9 @@ class PF_ActionFellTree : ActionContinuousBase
 		if (!tree || !tree.CanBeFelled())
 			return;
 
-		tree.Fell();
-		MiscGameplayFunctions.DealAbsoluteDmg(action_data.m_MainItem, 20);
+		// tool wear per cycle: vanilla toolDamage of the model (or 20 per tree)
+		tree.Chop(action_data.m_Player);
+		MiscGameplayFunctions.DealAbsoluteDmg(action_data.m_MainItem, tree.GetFellYield().ToolDamagePerCycle());
 	}
 }
 
