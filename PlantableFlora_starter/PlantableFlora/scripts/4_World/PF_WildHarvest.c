@@ -180,7 +180,7 @@ class PF_ActionSearchTreeSeed : ActionContinuousBase
 	override void CreateConditionComponents()
 	{
 		m_ConditionTarget = new CCTCursor(UAMaxDistances.DEFAULT);
-		m_ConditionItem = new CCINone;
+		m_ConditionItem = new CCINotPresent;
 	}
 
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
